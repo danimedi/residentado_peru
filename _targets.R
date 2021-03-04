@@ -1,10 +1,10 @@
 library(targets)
 sapply(list.files("code", full.names = TRUE, recursive = TRUE), source)
-tar_option_set(packages = "here", "tabulizer", "readr", "dplyr", "magrittr")
+tar_option_set(packages = c("here", "tabulizer", "readr", "dplyr", "magrittr"))
 
 list(
   tar_target(
-    read_pdf_tables, 
+    read_tables, 
     read_pdf_tables(
       path_input_pdf = "data/raw", 
       path_output_csv = "data/clean/identified"
