@@ -8,7 +8,9 @@
 #'
 #' @examples
 
-read_pdf_tables <- function(path_input_pdf = "data/raw", path_output_csv = "data/clean/identified") {
+read_pdf_tables <- function(path_input_pdf, path_output_csv) {
+  
+  # packages: here, tabulizer, readr
   
   # obtain files to extract tables from
   pdfs <- list.files(here::here(path_input_pdf), pattern = "[.]pdf$", full.names = TRUE)
