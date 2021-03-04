@@ -14,7 +14,7 @@ list(
     write_especialidad_aplicantes,
     condense_different_years(
       input_path = "data/clean/identified", 
-      output_csv_path = "data/clean/identified/especialidad_aplicantes.csv", 
+      output_csv_path = "data/clean/deidentified/especialidad_aplicantes.csv", 
       cols_regex = "Especialidad"
     )
   )
