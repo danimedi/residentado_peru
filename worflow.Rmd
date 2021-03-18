@@ -1,0 +1,27 @@
+---
+title: "Workflow"
+output: html_notebook
+---
+
+```{r}
+source2 <- function(...) {
+  funs <- unlist(list(...))
+  scripts <- paste0("code/", funs)
+  purrr::walk(scripts, source)
+}
+```
+
+## Extract and clean the data from PDF tables
+
+```{r}
+source2("read_pdf_tables.R")
+read_pdf_tables()
+```
+
+## Unify the data
+
+## Transform the data
+
+### Obtain gender from names
+
+Gender was obtained from the first name, the sources were a list of names according to sex from Wikipedia ([Nombres masculinos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_masculinos), [Nombres femeninos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_femeninos)) and a list from [GitHub](https://github.com/MatthiasWinkelmann/firstname-database). The gender of the remaining names was assigned by hand if it was clear. This information was condensed into one data set with two columns: `name` and `gender`.
