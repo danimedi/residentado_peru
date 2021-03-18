@@ -37,14 +37,38 @@ read_pdf_tables()
 
 ## Unify the data
 
+```{r unify-applicants}
+source2("unify_data_sets.R")
+files <- list.files("data/clean/identified", full.names = TRUE, 
+                     pattern = "postulantes[.]csv$")
+years <- 2013:2020
+x <- unify_data_sets(files, years)
+# write_csv(x, "data/clean/identified/peru-postulantes-2013-2020.csv")
+```
+
+```{r unify-incomings}
+files <- list.files("data/clean/identified", full.names = TRUE, 
+                     pattern = "ingresantes[.]csv$")
+years <- 2016:2020
+x <- unify_data_sets(files, years)
+# write_csv(x, "data/clean/identified/peru-ingresantes-2016-2020.csv")
+```
+
+```{r unify-everything}
+# deal with the people, each row should represent a person in a year, including the information before and after the exam, the same person can be in different rows, if the person applied in more than one year
+# also remove the identifiers using a random ID for identification
+```
+
 ## Transform the data
+
+### Reduce the data set
 
 ### Obtain gender from names
 
 Gender was obtained from the first name, the sources were a list of names according to sex from Wikipedia ([Nombres masculinos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_masculinos), [Nombres femeninos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_femeninos)) and a list from [GitHub](https://github.com/MatthiasWinkelmann/firstname-database). The gender of the remaining names was assigned by hand if it was clear. This information was condensed into one data set with two columns: `name` and `gender`.
 
 ```{r}
-genders <- read_csv("data/raw/names_gender/extended_data.csv")
+genders <- read_csv("data/clean/first_name-gender_dictionary.csv")
 head(genders)
 dim(genders)
 ```
