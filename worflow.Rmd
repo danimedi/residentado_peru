@@ -3,7 +3,14 @@ title: "Workflow"
 output: html_notebook
 ---
 
-```{r}
+```{r include=FALSE}
+# packages
+library(readr)
+library(dplyr)
+library(magrittr)
+library(stringr)
+
+# source multiple functions in the code directory
 source2 <- function(...) {
   funs <- unlist(list(...))
   scripts <- paste0("code/", funs)
@@ -11,9 +18,19 @@ source2 <- function(...) {
 }
 ```
 
+## Organization
+
+The main directories in the project are `code` and `data`, containing the scripts/functions and data for the files.
+
+### Data organization
+
+-   Raw files include the PDF files and other raw files that are not useful or programmable at first hand.
+
+-   Clean data contains processed data created to program or work with it. It is divided in 'identified' and 'deidentified' data, depending on the presence or absence of names, DNI, or other identifiers.
+
 ## Extract and clean the data from PDF tables
 
-```{r}
+```{r read-pdf}
 source2("read_pdf_tables.R")
 read_pdf_tables()
 ```
@@ -25,3 +42,38 @@ read_pdf_tables()
 ### Obtain gender from names
 
 Gender was obtained from the first name, the sources were a list of names according to sex from Wikipedia ([Nombres masculinos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_masculinos), [Nombres femeninos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_femeninos)) and a list from [GitHub](https://github.com/MatthiasWinkelmann/firstname-database). The gender of the remaining names was assigned by hand if it was clear. This information was condensed into one data set with two columns: `name` and `gender`.
+
+```{r}
+genders <- read_csv("data/raw/names_gender/extended_data.csv")
+head(genders)
+dim(genders)
+```
+
+Then we can obtain the gender in the "main" data set using the **first names**.
+
+```{r}
+dat <- read_csv("data/clean/identified/peru-postulantes-2013-2020.csv",
+                col_types = cols(.default = col_character()))
+head(dat)
+```
+
+```{r assign-gender}
+# remove accents
+str_to_english <- function(x) {
+  x %>% 
+    stringr::str_to_lower() %>% 
+    stringi::stri_trans_general(id = "Latin-ASCII")
+}
+
+# obtain first name
+first_names <- dat$Nombres %>% 
+  str_extract("\\w+") %>% 
+  str_to_lower() %>% 
+  str_to_lower()
+
+# create a column with the genders according with this first names
+lookup <- setNames(genders$gender, genders$name)
+x <- lookup[first_names] %>% unname()
+dat2 <- mutate(dat, gender = x)
+head(dat2)
+```
