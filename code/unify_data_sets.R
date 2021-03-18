@@ -14,7 +14,7 @@
 unify_data_sets <- function(files, years) {
   # read the files in a list as characters
   dat <- lapply(seq_along(files), function(i) {
-    dplyr::mutate(readr::read_csv(files[[i]], readr::col_types = readr::cols(.default = col_character())), 
+    dplyr::mutate(readr::read_csv(files[[i]], col_types = readr::cols(.default = col_character())), 
            year = years[[i]])
   })
   # bind the data sets by rows
