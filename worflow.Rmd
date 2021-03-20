@@ -42,21 +42,97 @@ source2("unify_data_sets.R")
 files <- list.files("data/clean/identified", full.names = TRUE, 
                      pattern = "postulantes[.]csv$")
 years <- 2013:2020
-x <- unify_data_sets(files, years)
-# write_csv(x, "data/clean/identified/peru-postulantes-2013-2020.csv")
+applicants <- unify_data_sets(files, years)
+# write_csv(applicants, "data/clean/identified/peru-postulantes-2013-2020.csv")
 ```
 
 ```{r unify-incomings}
 files <- list.files("data/clean/identified", full.names = TRUE, 
                      pattern = "ingresantes[.]csv$")
 years <- 2016:2020
-x <- unify_data_sets(files, years)
-# write_csv(x, "data/clean/identified/peru-ingresantes-2016-2020.csv")
+incomings <- unify_data_sets(files, years)
+# write_csv(incomings, "data/clean/identified/peru-ingresantes-2016-2020.csv")
 ```
 
 ```{r unify-everything}
-# deal with the people, each row should represent a person in a year, including the information before and after the exam, the same person can be in different rows, if the person applied in more than one year
-# also remove the identifiers using a random ID for identification
+# subset rows with codigo (year 2016)
+incomings1 <- incomings %>% filter(year == "2016")
+applicants1 <- applicants %>% filter(year %in% as.character(2013:2016))
+x <- full_join(applicants1, incomings1, by = c("year", "Codigo"), 
+               suffix = c("_postulantes", "_ingresantes"))
+
+# subset rows without codigo
+incomings2 <- incomings %>% filter(year != "2016")
+applicants2 <- applicants %>% filter(!year %in% as.character(2013:2016))
+y <- full_join(applicants2, incomings2, by = c("year", "No Doc."),
+               suffix = c("_postulantes", "_ingresantes"))
+
+# join both pieces
+dat_joined <- bind_rows(x, y)
+
+# select and filter the useful values
+
+# check that important columns have the same values
+check_cols <- function(df, cols) {
+  df_filt <- df %>% select(starts_with(cols))
+  lapply(seq(1, length(df_filt), 2), function(i) {
+    col_name <- names(df_filt[i])
+    j <- df_filt[[i]] != df_filt[[i+1]]
+    problems <- tibble(
+      indx = which(j),
+      x = as.character(df_filt[[i]][indx]),
+      y = as.character(df_filt[[i+1]][indx])
+    )
+    list(col_name, problems = problems)
+  })
+}
+columns <- c("Apellido Paterno", "Apellido Materno", "Nombres", "Universidad",
+             "Tipo", "Especialidad", "V11", "Modalidad", "Serum", "Bonif")
+# check_cols(dat_joined, columns)
+
+dat_final <- dat_joined %>% 
+  select(
+    year, Codigo, `No Doc.`, CMP, `Apellido Paterno_postulantes`, 
+    `Apellido Materno_postulantes`, Nombres_postulantes, Universidad_postulantes,
+    Universidad_ingresantes, Tipo_postulantes, 
+    `Especialidad/SubEspecialidad_postulantes`,
+    `Especialidad/SubEspecialidad_ingresantes`, V9,
+    V11_postulantes, V11_ingresantes, V13,
+    Modalidad_postulantes, Modalidad_ingresantes, Norma, O.M., untaje, SNCDS,
+    `1er Niv.`, `5to Sup.`, `Prom Pre`, ENAM, Estado, `Esp. Previa`, Examen,
+    `Factor A.`, `ota Fina`, Obs., No_ingresantes, rden, .xame, Ajuste, P.Final,
+    ngres, Sede
+  ) %>% rename(
+    apellido_paterno = `Apellido Paterno_postulantes`, 
+    apellido_materno = `Apellido Materno_postulantes`,
+    num_doc = `No Doc.`, nombres = Nombres_postulantes, tipo = Tipo_postulantes,
+    especialidad_subespecialidad_postulantes = `Especialidad/SubEspecialidad_postulantes`, especialidad_subespecialidad_ingresantes = `Especialidad/SubEspecialidad_ingresantes`,
+    puntaje = untaje, primer_nivel = `1er Niv.`, quinto_superior = `5to Sup.`,
+    promedio_pregrado = `Prom Pre`, especialidad_previa = `Esp. Previa`,
+    nota_final = `ota Fina`, observaciones = Obs., orden = rden, examen2 = .xame,
+    promedio_final = P.Final, ingreso = ngres
+  )
+# deal with the columns `ingreso` and `examen2` of the year 2016
+dat_2016 <- dat_final %>% filter(year == "2016")
+dat_2016$Examen <- dat_2016$examen2
+dat_final[dat_final$year == "2016", ] <- dat_2016
+dat_final <- dat_final %>% select(!c(ingreso, examen2))
+
+# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020")
+```
+
+After processing there were 67 rows with a lot of missing values, those were people with different IDs between the different data sets (postulantes vs. ingresantes).
+
+```{r}
+i <- !dat_final$apellido_paterno %in% applicants$`Apellido Paterno`
+phantom_dat <- dat_final[i, ]
+
+# reveal identity and join data
+x <- incomings[incomings$`No Doc.` %in% phantom_dat$num_doc, ]
+left_join(x, applicants, by = c("year", "Apellido Paterno", "Apellido Materno",
+                                "Nombres"))
+
+# INCLUDE THIS DATA IN THE FINAL DATA AND REMOVE THE PREVIOUS DATA OF THESE PEOPLE INCLUDED PREVIOUSLY
 ```
 
 ## Transform the data
