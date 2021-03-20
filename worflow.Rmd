@@ -101,7 +101,7 @@ dat_final <- dat_joined %>%
     Bonif._postulantes, V9, V11_postulantes, V11_ingresantes, V13,
     Modalidad_postulantes, Modalidad_ingresantes, Norma, O.M., untaje, SNCDS,
     `1er Niv.`, `5to Sup.`, `Prom Pre`, ENAM, Estado, `Esp. Previa`, Examen,
-    `Factor A.`, `ota Fina`, Obs., No_ingresantes, rden, .xame, Ajuste, P.Final,
+    `Factor A.`, `ota Fina`, Obs., rden, .xame, Ajuste, P.Final,
     ngres, Sede
   ) %>% rename(
     apellido_paterno = `Apellido Paterno_postulantes`, 
@@ -184,18 +184,10 @@ j <- (dat_final$year %in% x$year) &
 l <- i | j
 dat_final <- bind_rows(dat_final[!l, ], fixed_phantom)
 
-# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020")
+# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020.csv")
 ```
 
 ## Transform the data
-
-### De-identification
-
-```{r}
-dat <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020")
-```
-
-### Reduce the data set
 
 ### Obtain gender from names
 
@@ -210,9 +202,9 @@ dim(genders)
 Then we can obtain the gender in the "main" data set using the **first names**.
 
 ```{r}
-dat <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020",
+dat1 <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020",
                 col_types = cols(.default = col_character()))
-head(dat)
+head(dat1)
 ```
 
 ```{r assign-gender}
@@ -224,7 +216,7 @@ str_to_english <- function(x) {
 }
 
 # obtain first name
-first_names <- dat$Nombres %>% 
+first_names <- dat1$nombres %>% 
   str_extract("\\w+") %>% 
   str_to_lower() %>% 
   str_to_lower()
@@ -232,6 +224,55 @@ first_names <- dat$Nombres %>%
 # create a column with the genders according with this first names
 lookup <- setNames(genders$gender, genders$name)
 x <- lookup[first_names] %>% unname()
-dat2 <- mutate(dat, gender = x)
-head(dat2)
+dat2 <- mutate(dat1, gender = x)
+```
+
+### De-identification
+
+An option for the de-identification could be "rescuing" a column to identify people, e.g. if the same person applies to residency in different years, it will have the same number in that column. The challenge is that there are few rows with both id number and code, so maybe there was a lost of information in the code before. Options to capture this information are matching the codes or using last/first-names.
+
+At the moment there is no column for the identifier.
+
+```{r}
+dat3 <- dat2 %>% select(year, gender, Universidad_postulantes:Sede)
+```
+
+### Final "cleaning"
+
+```{r}
+library(stringr)
+# functions for transformations
+transform_numeric <- function(x) {
+  y1 <- str_extract(x, "\\d+[.]\\d+")
+  y2 <- str_extract(x, "\\d+")
+  ifelse(!is.na(y1), as.double(y1), as.integer(y2))
+}
+```
+
+```{r}
+dat4 <- dat3 %>% mutate(
+  year = as.integer(year),
+  gender = ifelse(gender == "F", 1, 0),
+  serum = transform_numeric(serum),
+  bonificacion = as.double(bonificacion),
+  puntaje = as.double(puntaje),
+  SNCDS = transform_numeric(SNCDS),
+  primer_nivel = transform_numeric(primer_nivel),
+  quinto_superior = transform_numeric(quinto_superior),
+  ENAM = transform_numeric(ENAM),
+  Estado = ifelse(Estado == "Apto", 1, 0),
+  especialidad_previa = ifelse(
+    especialidad_previa == "NO", 0, 
+    as.integer(str_extract(especialidad_previa, "\\d+"))
+  ),
+  Examen = transform_numeric(Examen),
+  `Factor A.` = transform_numeric(`Factor A.`),
+  nota_final = transform_numeric(nota_final),
+  observaciones = ifelse(is.na(observaciones), 0, 1),
+  orden = transform_numeric(orden),
+  Ajuste = transform_numeric(Ajuste),
+  promedio_final = transform_numeric(promedio_final),
+)
+
+# write_csv(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.csv")
 ```
