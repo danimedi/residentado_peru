@@ -3,12 +3,14 @@ title: "Workflow"
 output: html_notebook
 ---
 
-```{r include=FALSE}
+```{r setup, include=FALSE}
 # packages
 library(readr)
 library(dplyr)
+library(tibble)
 library(magrittr)
 library(stringr)
+library(purrr)
 
 # source multiple functions in the code directory
 source2 <- function(...) {
@@ -71,8 +73,6 @@ y <- full_join(applicants2, incomings2, by = c("year", "No Doc."),
 # join both pieces
 dat_joined <- bind_rows(x, y)
 
-# select and filter the useful values
-
 # check that important columns have the same values
 check_cols <- function(df, cols) {
   df_filt <- df %>% select(starts_with(cols))
@@ -97,8 +97,8 @@ dat_final <- dat_joined %>%
     `Apellido Materno_postulantes`, Nombres_postulantes, Universidad_postulantes,
     Universidad_ingresantes, Tipo_postulantes, 
     `Especialidad/SubEspecialidad_postulantes`,
-    `Especialidad/SubEspecialidad_ingresantes`, V9,
-    V11_postulantes, V11_ingresantes, V13,
+    `Especialidad/SubEspecialidad_ingresantes`, Serum_postulantes, 
+    Bonif._postulantes, V9, V11_postulantes, V11_ingresantes, V13,
     Modalidad_postulantes, Modalidad_ingresantes, Norma, O.M., untaje, SNCDS,
     `1er Niv.`, `5to Sup.`, `Prom Pre`, ENAM, Estado, `Esp. Previa`, Examen,
     `Factor A.`, `ota Fina`, Obs., No_ingresantes, rden, .xame, Ajuste, P.Final,
@@ -108,6 +108,7 @@ dat_final <- dat_joined %>%
     apellido_materno = `Apellido Materno_postulantes`,
     num_doc = `No Doc.`, nombres = Nombres_postulantes, tipo = Tipo_postulantes,
     especialidad_subespecialidad_postulantes = `Especialidad/SubEspecialidad_postulantes`, especialidad_subespecialidad_ingresantes = `Especialidad/SubEspecialidad_ingresantes`,
+    serum = Serum_postulantes, bonificacion = Bonif._postulantes,
     puntaje = untaje, primer_nivel = `1er Niv.`, quinto_superior = `5to Sup.`,
     promedio_pregrado = `Prom Pre`, especialidad_previa = `Esp. Previa`,
     nota_final = `ota Fina`, observaciones = Obs., orden = rden, examen2 = .xame,
@@ -118,25 +119,81 @@ dat_2016 <- dat_final %>% filter(year == "2016")
 dat_2016$Examen <- dat_2016$examen2
 dat_final[dat_final$year == "2016", ] <- dat_2016
 dat_final <- dat_final %>% select(!c(ingreso, examen2))
-
-# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020")
 ```
 
 After processing there were 67 rows with a lot of missing values, those were people with different IDs between the different data sets (postulantes vs. ingresantes).
 
 ```{r}
-i <- !dat_final$apellido_paterno %in% applicants$`Apellido Paterno`
+# find the phantom data in the final data
+# `i` evaluates the data that is present in the final data but it's not present in the applicants data
+i <- !((dat_final$year %in% applicants$year) & 
+  (dat_final$apellido_paterno %in% applicants$`Apellido Paterno`) & 
+  (dat_final$apellido_materno %in% applicants$`Apellido Materno`))
 phantom_dat <- dat_final[i, ]
 
 # reveal identity and join data
 x <- incomings[incomings$`No Doc.` %in% phantom_dat$num_doc, ]
-left_join(x, applicants, by = c("year", "Apellido Paterno", "Apellido Materno",
-                                "Nombres"))
+fixed_phantom <- left_join(x, applicants, 
+                           by = c("year", "Apellido Paterno", "Apellido Materno"),
+                           suffix = c("_ingresantes", "_postulantes"))
+# remove empty columns
+k <- map_lgl(fixed_phantom, ~ all(is.na(.x)))
+fixed_phantom <- fixed_phantom[,!k]
+# rename columns to join the rows
+fixed_phantom <- fixed_phantom %>% 
+  rename(
+    apellido_paterno = `Apellido Paterno`, 
+    apellido_materno = `Apellido Materno`, nombres1 = Nombres_postulantes,
+    nombres2 = Nombres_ingresantes, tipo1 = Tipo_postulantes,
+    tipo2 = Tipo_ingresantes,
+    especialidad_subespecialidad_postulantes = `Especialidad/SubEspecialidad_postulantes`, especialidad_subespecialidad_ingresantes = `Especialidad/SubEspecialidad_ingresantes`,
+    serum = Serum_postulantes,
+    primer_nivel = `1er Niv.`, quinto_superior = `5to Sup.`,
+    promedio_pregrado = `Prom Pre`,
+    nota_final = `ota Fina`
+  )
+# deal with nombres2, tipo2, No Doc., Codigo
+jump_cols <- function(dat, cols) {
+  h <- is.na(dat[[cols[1]]]) & !is.na(dat[[cols[2]]])
+  dat[h, cols[1]] <- dat[h, cols[2]]
+  dat
+}
+fixed_phantom <- fixed_phantom %>% 
+  jump_cols(c("nombres1", "nombres2")) %>% 
+  jump_cols(c("tipo1", "tipo2")) %>% 
+  jump_cols(c("No Doc._ingresantes", "No Doc._postulantes")) %>% 
+  select(
+    !c(nombres2, tipo2, `No Doc._postulantes`, No_ingresantes, Obser.,
+       No_postulantes)
+  ) %>% 
+  rename(nombres = nombres1, tipo = tipo1, num_doc = `No Doc._ingresantes`,
+         Codigo = Codigo_postulantes)
+# be sure that there are no new columns
+length(setdiff(names(fixed_phantom), names(dat_final))) == 0
 
-# INCLUDE THIS DATA IN THE FINAL DATA AND REMOVE THE PREVIOUS DATA OF THESE PEOPLE INCLUDED PREVIOUSLY
+# remove the phantom data and its conections in the main data set and add the new clean phantom data
+# `i` evaluates the data that is present in the final data but it's not present in the applicants data
+i <- !((dat_final$year %in% applicants$year) & 
+  (dat_final$apellido_paterno %in% applicants$`Apellido Paterno`) & 
+  (dat_final$apellido_materno %in% applicants$`Apellido Materno`))
+# `j` evaluates the data that is present in the final data and also in the phantom data, it shows the "identity" of the phantom data
+j <- (dat_final$year %in% x$year) & 
+  (dat_final$apellido_paterno %in% x$`Apellido Paterno`) & 
+  (dat_final$apellido_materno %in% x$`Apellido Materno`)
+# remove both of them, the phantom data and its connections and add the new "clean" phantom data
+l <- i | j
+dat_final <- bind_rows(dat_final[!l, ], fixed_phantom)
+
+# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020")
 ```
 
 ## Transform the data
+
+### De-identification
+
+```{r}
+dat <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020")
+```
 
 ### Reduce the data set
 
@@ -153,7 +210,7 @@ dim(genders)
 Then we can obtain the gender in the "main" data set using the **first names**.
 
 ```{r}
-dat <- read_csv("data/clean/identified/peru-postulantes-2013-2020.csv",
+dat <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020",
                 col_types = cols(.default = col_character()))
 head(dat)
 ```
