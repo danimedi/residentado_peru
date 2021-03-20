@@ -18,6 +18,15 @@ source2 <- function(...) {
   scripts <- paste0("code/", funs)
   purrr::walk(scripts, source)
 }
+# save the complete data set based on the date (to avoid losing information)
+save_final_dat <- function(df) {
+  path <- paste0(
+    "data/clean/deidentified/completos/peru-COMPLETO-2013-2020_",
+    Sys.Date(),
+    ".rds"
+  )
+  saveRDS(df, path)
+}
 ```
 
 ## Organization
@@ -257,7 +266,7 @@ transform_numeric <- function(x) {
 }
 ```
 
-```{r}
+```{r change-column-types}
 dat4 <- dat3 %>% mutate(
   year = as.integer(year),
   gender = ifelse(gender == "F", 1, 0),
@@ -286,7 +295,59 @@ dat4 <- dat3 %>% mutate(
 dat4 <- dat4 %>% 
   mutate(ingreso = ifelse(is.na(especialidad_subespecialidad_ingresantes),
                           0, 1))
-
-# write_csv(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.csv")
-# saveRDS(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.rds")
 ```
+
+### Fix "bad names" of universities
+
+Some universities had problems with the names.
+
+```{r}
+dat <- read_rds("data/clean/deidentified/peru-COMPLETO-2013-2020.rds")
+head(dat)
+```
+
+```{r}
+# detect low frequency universities
+detect_low_freq <- function(df, cols) {
+  df <- df[cols]
+  map(df, function(col) {
+    freqs <- table(col) %>% sort()
+    tibble(value = names(freqs), n = unname(freqs))
+  })
+}
+# detect_low_freq(dat, c("Universidad_postulantes", "Universidad_ingresantes"))
+
+lookup_postulantes <- c(
+  "AUSMP" = "USMP", "DITHURP" = "URP", "EMMAUNMSM" = "UNMSM", "ENASUPCH" = "UPCH",
+  "GOUSMP" = "USMP", "HUNT" = "UNT", "HURP" = "URP", "IKUNSA" = "UNSA",
+  "IUPCH" = "UPCH", "LESUNSA" = "UNSA", "LESUSMP" = "USMP", "LINDAUPAO" = "UPAO",
+  "NUNCP" = "UNCP", "OSURP" = "URP", "OUNMSM" = "UNMSM", "OUNSA" = "UNSA",
+  "RIOUPAO" = "UPAO", "ROSURP" = "URP", "RRESUNMSM" = "UNMSM", "RUPAO" = "UPAO",
+  "SUNMSM" = "UNMSM", "SUPAO" = "UPAO", "SUPCH" = "UPCH", "AURP" = "URP",
+  "EDESUNMSM" = "UNMSM", "HUPAO" = "UPAO", "IEUNSA" = "UNSA", "SURP" = "URP",
+  "SUSMP" = "USMP"
+) # missing: "N FEURNMASNMDEZ", "ROSARUIORP", "SABINUANMSM"
+
+lookup_ingresantes <- c(
+  "OUSMP" = "USMP", "SURP" = "URP"
+)
+
+replace_lookups <- function(x, lookup) {
+  ifelse(x %in% names(lookup), lookup[x], x)
+}
+dat$Universidad_postulantes <- replace_lookups(dat$Universidad_postulantes,
+                                               lookup_postulantes)
+dat$Universidad_ingresantes <- replace_lookups(dat$Universidad_ingresantes,
+                                               lookup_ingresantes)
+
+# detect_low_freq(dat, c("Universidad_postulantes", "Universidad_ingresantes"))
+```
+
+### Add the region based on the universities
+
+```{r}
+universities <- read_csv("data/raw/university-region/region_for_universities - spreadsheet.csv")
+head(universities)
+```
+
+Use that information to create a column with the location/region/departamento.
