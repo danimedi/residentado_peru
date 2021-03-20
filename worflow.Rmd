@@ -274,5 +274,10 @@ dat4 <- dat3 %>% mutate(
   promedio_final = transform_numeric(promedio_final),
 )
 
+# add a column to indicate if the person obtained or not the residency
+dat4 <- dat4 %>% 
+  mutate(ingreso = ifelse(is.na(especialidad_subespecialidad_ingresantes),
+                          0, 1))
+
 # write_csv(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.csv")
 ```
