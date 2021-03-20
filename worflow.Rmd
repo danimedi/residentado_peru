@@ -126,9 +126,11 @@ After processing there were 67 rows with a lot of missing values, those were peo
 ```{r}
 # find the phantom data in the final data
 # `i` evaluates the data that is present in the final data but it's not present in the applicants data
-i <- !((dat_final$year %in% applicants$year) & 
-  (dat_final$apellido_paterno %in% applicants$`Apellido Paterno`) & 
-  (dat_final$apellido_materno %in% applicants$`Apellido Materno`))
+i <- !(paste0(
+  dat_final$year, dat_final$apellido_paterno, dat_final$apellido_materno
+) %in% paste0(
+  applicants$year, applicants$`Apellido Paterno`, applicants$`Apellido Materno`
+))
 phantom_dat <- dat_final[i, ]
 
 # reveal identity and join data
@@ -173,18 +175,24 @@ length(setdiff(names(fixed_phantom), names(dat_final))) == 0
 
 # remove the phantom data and its conections in the main data set and add the new clean phantom data
 # `i` evaluates the data that is present in the final data but it's not present in the applicants data
-i <- !((dat_final$year %in% applicants$year) & 
-  (dat_final$apellido_paterno %in% applicants$`Apellido Paterno`) & 
-  (dat_final$apellido_materno %in% applicants$`Apellido Materno`))
-# `j` evaluates the data that is present in the final data and also in the phantom data, it shows the "identity" of the phantom data
-j <- (dat_final$year %in% x$year) & 
-  (dat_final$apellido_paterno %in% x$`Apellido Paterno`) & 
-  (dat_final$apellido_materno %in% x$`Apellido Materno`)
+i <- !(paste0(
+  dat_final$year, dat_final$apellido_paterno, dat_final$apellido_materno
+) %in% paste0(
+  applicants$year, applicants$`Apellido Paterno`, applicants$`Apellido Materno`
+))
+# `j` evaluates the data that is present in the final data and also in the phantom data
+j <- paste0(
+  dat_final$year, dat_final$apellido_paterno, dat_final$apellido_materno
+) %in% paste0(
+  fixed_phantom$year, fixed_phantom$apellido_paterno,
+  fixed_phantom$apellido_materno
+)
 # remove both of them, the phantom data and its connections and add the new "clean" phantom data
 l <- i | j
 dat_final <- bind_rows(dat_final[!l, ], fixed_phantom)
 
 # write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020.csv")
+# saveRDS(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020.rds")
 ```
 
 ## Transform the data
@@ -202,7 +210,7 @@ dim(genders)
 Then we can obtain the gender in the "main" data set using the **first names**.
 
 ```{r}
-dat1 <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020",
+dat1 <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020.csv",
                 col_types = cols(.default = col_character()))
 head(dat1)
 ```
@@ -280,4 +288,5 @@ dat4 <- dat4 %>%
                           0, 1))
 
 # write_csv(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.csv")
+# saveRDS(dat4, "data/clean/deidentified/peru-COMPLETO-2013-2020.rds")
 ```
