@@ -32,7 +32,8 @@ The main directories in the project are `code` and `data`, containing the script
 
 ```{r read-pdf}
 source2("read_pdf_tables.R")
-read_pdf_tables()
+read_pdf_tables(path_input_pdf = "data/raw", 
+                path_output_csv = "data/clean/identified")
 ```
 
 ## Unify the data
