@@ -19,13 +19,25 @@ source2 <- function(...) {
   purrr::walk(scripts, source)
 }
 # save the complete data set based on the date (to avoid losing information)
-save_final_dat <- function(df) {
+write_complete_data <- function(df) {
   path <- paste0(
     "data/clean/deidentified/completos/peru-COMPLETO-2013-2020_",
     Sys.Date(),
     ".rds"
   )
   saveRDS(df, path)
+}
+# read the last complete data
+read_complete_data <- function(file_name = NULL) {
+  path <- "data/clean/deidentified/completos"
+  if (is.null(file_name)) {
+    files <- list.files(path, pattern = "[.]rds$", full.names = TRUE)
+    last_file <- files[length(files)]
+    read_rds(last_file)
+  } else {
+    file <- file.path(path, file_name)
+    read_rds(file)
+  }
 }
 ```
 
@@ -200,8 +212,7 @@ j <- paste0(
 l <- i | j
 dat_final <- bind_rows(dat_final[!l, ], fixed_phantom)
 
-# write_csv(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020.csv")
-# saveRDS(dat_final, "data/clean/identified/peru-COMPLETO-2013-2020.rds")
+# write_complete_data(dat_final)
 ```
 
 ## Transform the data
@@ -219,8 +230,7 @@ dim(genders)
 Then we can obtain the gender in the "main" data set using the **first names**.
 
 ```{r}
-dat1 <- read_csv("data/clean/identified/peru-COMPLETO-2013-2020.csv",
-                col_types = cols(.default = col_character()))
+dat1 <- read_complete_data()
 head(dat1)
 ```
 
@@ -302,7 +312,7 @@ dat4 <- dat4 %>%
 Some universities had problems with the names.
 
 ```{r}
-dat <- read_rds("data/clean/deidentified/peru-COMPLETO-2013-2020.rds")
+dat <- read_complete_data()
 head(dat)
 ```
 
@@ -351,3 +361,24 @@ head(universities)
 ```
 
 Use that information to create a column with the location/region/departamento.
+
+### Separate specialties by type
+
+```{r}
+library(stringr)
+dat <- read_complete_data()
+specialties <- unique(dat$especialidad_subespecialidad_postulantes)
+types_specialties <- list(
+  covid_related = c(
+    "MEDICINA DE EMERGENCIAS Y DESASTRES", 
+    "MEDICINA DE ENFERMEDADES INFECCIOSA", 
+    "ADMINISTRACION  Y GESTION EN SALUD",
+    "ADMINISTRACION EN SALUD",
+    "MEDICINA DE ENFERMEDADES INFECCIOSAS Y TROPIC",
+    "ADMINISTRACION Y GESTION EN SALUD"
+  ),
+  surgical = str_subset(specialties, "(CIRUGIA|ORTOPEDIA Y TRAUMATOLOGIA)"),
+  clinical = str_subset(specialties, "(CIRUGIA|ORTOPEDIA Y TRAUMATOLOGIA)", 
+                        negate = TRUE)
+)
+```
