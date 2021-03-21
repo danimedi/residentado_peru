@@ -1,0 +1,25 @@
+---
+title: "Analysis"
+author: "Daniel Medina-Neira"
+date: "2021-03-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# set the project as the root directory
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+Research idea:
+
+1. Obtain the information about how the numbers of women doing medical specialties in Peru are increasing
+2. Obtain the number of doctors dead by COVID-19 (mostly men)
+3. Make conclusions and explain the effects of a future with probably more women than men as specialists and the future impact of COVID-19 in some specialists with a lot of men
+
+Things to do:
+
+1. Analyze the data of the residency, mainly from the accepted people into residency.
+2. Extract data from "Colegio Médico" with code or ask for the data.
+3. Discuss and think about the results and its consequences
+
