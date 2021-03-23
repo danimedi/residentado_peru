@@ -11,15 +11,47 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = here::here())
 ```
 
-Research idea:
+## Hypothesis and importance
 
-1. Obtain the information about how the numbers of women doing medical specialties in Peru are increasing
-2. Obtain the number of doctors dead by COVID-19 (mostly men)
-3. Make conclusions and explain the effects of a future with probably more women than men as specialists and the future impact of COVID-19 in some specialists with a lot of men
+- How are the numbers of females being accepted into specialties changing across the different specialties.
+- Women are having more opportunities in different fields, and medicine is probably not an exception, this is important because, for example, during this COVID-19 pandemic men were disproportionately affected, just because of the sex. Having more (sex) diversity is positive in different ways and maybe that is something we are working towards to.
 
-Things to do:
+------------------------------------------------------------------------
 
-1. Analyze the data of the residency, mainly from the accepted people into residency.
-2. Extract data from "Colegio Médico" with code or ask for the data.
-3. Discuss and think about the results and its consequences
+# Title
+
+## Introduction
+
+Current situation: proportion of female doctors and females with specialties.
+
+## Methods / results
+
+### Women *entering/applying* specialties in different years
+
+#### Total / accumulated
+
+#### By specialties
+
+#### By region
+
+### Women *working* in specialties in different years
+
+#### Total / accumulated
+
+#### By specialties
+
+#### By region
+
+
+## Conclusion
+
+## Discussion
+
+COVID-19 argument: women play a crucial role in society and nowadays they are being an increasing force in some fields, and medicine is no exception. Having more women is a good thing, for example, at this time, during the COVID-19 pandemic, males were disproportionately affected just because of the sex and sometimes this could have a big impact in some places with low numbers of certain specialties. This is just an example, the presence of females could help in many different ways.
+
+Specialists are NOT all the physicians, there are a lot of physicians that are not specialists (how many?)
+
+
+
+
 
