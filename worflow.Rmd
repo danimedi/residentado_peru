@@ -20,7 +20,7 @@ source2 <- function(...) {
 # save the complete data set based on the date (to avoid losing information)
 write_complete_data <- function(df) {
   path <- paste0(
-    "data/clean/deidentified/completos/peru-COMPLETO-2013-2020_",
+    "data/clean_deidentified_joined/peru-COMPLETO-2013-2020_",
     Sys.Date(),
     ".rds"
   )
@@ -28,7 +28,7 @@ write_complete_data <- function(df) {
 }
 # read the last complete data
 read_complete_data <- function(file_name = NULL) {
-  path <- "data/clean/deidentified/completos"
+  path <- "data/clean_deidentified_joined"
   if (is.null(file_name)) {
     files <- list.files(path, pattern = "[.]rds$", full.names = TRUE)
     last_file <- files[length(files)]
@@ -229,7 +229,7 @@ dim(genders)
 Then we can obtain the gender in the "main" data set using the **first names**.
 
 ```{r}
-dat1 <- read_complete_data()
+dat1 <- read_rds("data/conareme/identified/peru-COMPLETO-2013-2020.rds")
 head(dat1)
 ```
 
@@ -244,12 +244,11 @@ str_to_english <- function(x) {
 # obtain first name
 first_names <- dat1$nombres %>% 
   str_extract("\\w+") %>% 
-  str_to_lower() %>% 
-  str_to_lower()
+  str_to_english()
 
 # create a column with the genders according with this first names
 lookup <- setNames(genders$gender, genders$name)
-x <- lookup[first_names] %>% unname()
+x <- unname(lookup[first_names])
 dat2 <- mutate(dat1, gender = x)
 ```
 
