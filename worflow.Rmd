@@ -334,8 +334,9 @@ lookup_postulantes <- c(
   "RIOUPAO" = "UPAO", "ROSURP" = "URP", "RRESUNMSM" = "UNMSM", "RUPAO" = "UPAO",
   "SUNMSM" = "UNMSM", "SUPAO" = "UPAO", "SUPCH" = "UPCH", "AURP" = "URP",
   "EDESUNMSM" = "UNMSM", "HUPAO" = "UPAO", "IEUNSA" = "UNSA", "SURP" = "URP",
-  "SUSMP" = "USMP"
-) # missing: "N FEURNMASNMDEZ", "ROSARUIORP", "SABINUANMSM"
+  "SUSMP" = "USMP", "SABINUANMSM" = "UNMSM", "ROSARUIORP" = "URP",
+  "N FEURNMASNMDEZ" = "UNMSM"
+)
 
 lookup_ingresantes <- c(
   "OUSMP" = "USMP", "SURP" = "URP"
