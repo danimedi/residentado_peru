@@ -221,7 +221,7 @@ dat_final <- bind_rows(dat_final[!l, ], fixed_phantom)
 Gender was obtained from the first name, the sources were a list of names according to sex from Wikipedia ([Nombres masculinos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_masculinos), [Nombres femeninos](https://es.wikipedia.org/wiki/Categor%C3%ADa:Nombres_femeninos)) and a list from [GitHub](https://github.com/MatthiasWinkelmann/firstname-database). The gender of the remaining names was assigned by hand if it was clear. This information was condensed into one data set with two columns: `name` and `gender`.
 
 ```{r}
-genders <- read_csv("data/clean/first_name-gender_dictionary.csv")
+genders <- read_csv("data/names_gender/first_name-gender_dictionary.csv")
 head(genders)
 dim(genders)
 ```
@@ -355,7 +355,7 @@ dat$Universidad_ingresantes <- replace_lookups(dat$Universidad_ingresantes,
 ### Add the region based on the universities
 
 ```{r}
-universities <- read_csv("data/raw/university-region/region_for_universities - spreadsheet.csv")
+universities <- read_csv("data/university_region/region_for_universities - spreadsheet.csv")
 head(universities)
 ```
 
