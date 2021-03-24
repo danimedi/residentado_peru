@@ -1,8 +1,12 @@
 ---
-title: "Workflow"
+title: "Clean data from CONAREME tables of applicants and incomings (aplicantes e ingresantes)"
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# set the project as the root directory
+knitr::opts_knit$set(root.dir = here::here())
+
 # packages
 library(readr)
 library(dplyr)
@@ -14,7 +18,7 @@ library(purrr)
 # source multiple functions in the code directory
 source2 <- function(...) {
   funs <- unlist(list(...))
-  scripts <- paste0("code/", funs)
+  scripts <- file.path("code/functions", funs)
   purrr::walk(scripts, source)
 }
 # save the complete data set based on the date (to avoid losing information)
