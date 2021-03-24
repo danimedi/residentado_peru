@@ -22,9 +22,9 @@ write_complete_data <- function(df) {
   path <- paste0(
     "data/clean_deidentified_joined/peru-COMPLETO-2013-2020_",
     Sys.Date(),
-    ".rds"
+    ".csv"
   )
-  saveRDS(df, path)
+  write_csv(df, path)
 }
 # read the last complete data
 read_complete_data <- function(file_name = NULL) {
