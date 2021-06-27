@@ -1,0 +1,114 @@
+---
+title: "Gender across different specialties"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("functions_by_gender.R")
+```
+
+## Tendencias por género de los ingresantes a especialidades médicas en el Perú
+
+Daniel Medina-Neira, Napoleon Medina-Neira
+
+```{r}
+load(here::here("data/peru_residentado.rda"))
+dat <- peru_residentado
+# gender 0 and 1 (1 = F, 0 = M) to M and F
+dat$gender <- ifelse(dat$gender, "female", "male")
+```
+
+## Introducción
+
+\% de especialistas 2018
+
+```{r}
+round(20117/43805*100, 2)
+```
+
+## Resultados
+
+### Asignación de género
+
+cantidad de ingresantes (número y proporción):
+
+```{r}
+sum( !is.na(dat[, "gender"]) )
+100-round(mean( is.na(dat[, "gender"]) )*100, 2)
+```
+
+cantidad de postulantes (número y proporción):
+
+```{r}
+sum( !is.na(dat[dat$ingreso == 1, "gender"]) )
+100-round(mean( is.na(dat[dat$ingreso == 1, "gender"]) )*100, 2)
+```
+
+## Ingresantes a residencias por género
+
+Figura 1
+
+```{r}
+source("functions_by_gender.R")
+give_timeline(column = "gender", years = 2013:2020, top = 2, ylim = c(0,3500))
+```
+
+en cifras exactas:
+
+```{r}
+#postulations
+table( dat[ dat$year == 2013, "gender"] ) # 2013
+table( dat[ dat$year == 2014, "gender"] ) # 2014
+table( dat[ dat$year == 2015, "gender"] ) # 2015
+table( dat[ dat$year == 2016, "gender"] ) # 2016
+table( dat[ dat$year == 2017, "gender"] ) # 2017
+table( dat[ dat$year == 2018, "gender"] ) # 2018
+table( dat[ dat$year == 2019, "gender"] ) # 2019
+table( dat[ dat$year == 2020, "gender"] ) # 2020
+
+#enters
+table( dat[ (dat$year == 2016) & (dat$ingreso == 1), "gender"] ) # 2016
+table( dat[ (dat$year == 2017) & (dat$ingreso == 1), "gender"] ) # 2017
+table( dat[ (dat$year == 2018) & (dat$ingreso == 1), "gender"] ) # 2018
+table( dat[ (dat$year == 2019) & (dat$ingreso == 1), "gender"] ) # 2019
+table( dat[ (dat$year == 2020) & (dat$ingreso == 1), "gender"] ) # 2020
+```
+
+## Especialidades por género, postulantes e ingresantes
+
+Primeras gráficas el total de postulantes, mostrando la cantidad de ingresantes
+Segudas gráficas lo mismo, pero por género
+Tabla de lo anterior
+
+```{r}
+give_bars(column = "especialidad_subespecialidad_postulantes", years = 2013:2020)
+give_sep_bars("especialidad_subespecialidad_postulantes", "gender", top = 20, years = 2016:2020, adj = 10)
+ent_post_spec_by_gender(top = 15, years = 2016:2020)
+```
+
+## Ingresantes a especialidades a través del tiempo
+
+Línea de tiempo de 30 especialidades, en el artículo solo se muestran las 15 primeras
+
+```{r}
+par(mfrow = c(4,4))
+timelines_by("gender", "especialidad_subespecialidad_ingresantes",
+             top_column = 2, top_by = 30, 2016:2020, ylim = c(0,150))
+
+```
+
+cálculos de cuántas veces más
+
+```{r}
+tab1 <- give_sep_bars_enters_table("especialidad_subespecialidad_ingresantes", "gender", top = 30, years = 2016:2020)
+ratios_m_f1 <- lapply(tab1,
+                       function(x) {round( as.matrix(x[,"male"]/x[,"female"]), 2 )} )
+ratios_f_m1 <- lapply(tab1,
+                      function(x) {round( as.matrix(x[,"female"]/x[,"male"]), 2 )} )
+
+round(sort(rowMeans(as.data.frame(ratios_m_f1)))) # more males
+round(sort(rowMeans(as.data.frame(ratios_f_m1)))) # more females
+
+```
+

@@ -1,0 +1,308 @@
+---
+title: "Analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(ggplot2)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(shiny)
+
+# Load data
+load(here::here("data/peru_residentado.rda"))
+dat <- peru_residentado
+# Gender 0 and 1 (1 = F, 0 = M) to M and F
+dat$gender <- ifelse(dat$gender, "female", "male")
+```
+
+## Objetivos específicos
+
+- Determinar el número de postulantes e ingresantes por género cada año.
+- Determinar el número de postulantes e ingresantes por género cada año en cada una de las especialidades o subespecialidades médicas.
+- Determinar el número de postulantes e ingresantes por género cada año de acuerdo al lugar de postulación o ingreso.
+- Determinar el número de postulantes e ingresantes por género cada año de acuerdo la universidad.
+- Identificar los factores más importantes determinantes de los cambios en el número de postulantes e ingresantes por género (ej. si el aumento en el número de mujeres está dado por un aumento en el número de plazas en algunas especialidades).
+
+## Análisis
+
+En estas figuras se muestran los cambios en el número de postulantes e ingresantes en los últimos años.
+
+```{r}
+filter_incomings <- function(df) filter(df, ingreso == 1)
+count_by_year <- function(df) df %>% group_by(year) %>% count()
+graph_timeline <- function(df) ggplot(df) + geom_line(aes(year, n))
+
+# All applicants
+dat %>% count_by_year() %>% graph_timeline()
+# Only those who entered
+dat %>% filter_incomings() %>% count_by_year() %>% graph_timeline()
+```
+
+Y de acuerdo al género.
+
+```{r}
+count_by_gender <- function(df) df %>% group_by(year, gender) %>% count()
+graph_timeline <- function(df) ggplot(df) + geom_line(aes(year, n, color = gender))
+
+dat %>% count_by_gender() %>% graph_timeline()
+dat %>% filter_incomings() %>% count_by_gender() %>% graph_timeline()
+```
+
+Analizando la relación mujer:hombre en los distintos años.
+
+```{r}
+get_ratio <- function(df) {
+  df %>%
+    drop_na(gender) %>%
+    group_by(year) %>%
+    summarize(r = n[gender == "female"] / n[gender == "male"])
+}
+graph_timeline <- function(df) ggplot(df) + geom_line(aes(year, r))
+
+dat %>% count_by_gender() %>% get_ratio() %>% graph_timeline()
+dat %>% filter_incomings() %>% count_by_gender() %>% get_ratio() %>% graph_timeline()
+```
+
+Ahora, obtener frecuencias según género separando de acuerdo a otras variables.
+
+```{r}
+count_var_by_year <- function(df, var) {
+  by_years <- df %>% group_by(year, {{ var }}, gender) %>% count()
+  # by_years <- arrange(by_years, desc(n), .by_group = TRUE)
+  by_years
+}
+
+# Here you can explore different variables obtaining the frequency in different
+# years
+dat %>% count_var_by_year(Universidad_postulantes)
+dat %>% filter_incomings() %>% count_var_by_year(Universidad_postulantes)
+```
+
+Comparar la relación mujer:hombre en las distintas variables permite poder ver en qué lugares hay discrepancias. Podemos obtener esta relación en los distintos años de acuerdo a diferentes variables.
+
+```{r}
+get_ratio <- function(df, var) {
+  df %>%
+    drop_na(gender) %>%
+    group_by(year, {{ var }}) %>%
+    summarize(r = n[gender == "female"] / n[gender == "male"])
+}
+dat %>%
+  count_var_by_year(Universidad_postulantes) %>%
+  get_ratio(Universidad_postulantes)
+dat %>%
+  filter_incomings() %>%
+  count_var_by_year(Universidad_postulantes) %>%
+  get_ratio(Universidad_postulantes)
+```
+
+Podemos explorar más fácilmente esto en las distintas variables usando una Shiny app.
+
+```{r}
+count_var_by_year <- function(df, var) {
+  df %>% group_by(year, .data[[var]], gender) %>% count()
+}
+
+get_ratio <- function(df, var) {
+  get_ratio_in_group <- function(df) {
+    if (all(c("female", "male") %in% df$gender)) {
+      df$n[df$gender == "female"] / df$n[df$gender == "male"]
+    } else if (any(df$gender %in% "female")) {
+      Inf
+    } else if (any(df$gender %in% "male")) {
+      0
+    } else {
+      NA
+    }
+  }
+  nested_dat <- df %>%
+    drop_na(gender) %>%
+    group_by(year, .data[[var]]) %>%
+    nest()
+  nested_dat %>%
+    mutate(r = map(data, get_ratio_in_group)) %>%
+    unnest(c(data, r)) %>%
+    arrange(r, .by_group = TRUE)
+}
+
+shinyApp(
+  ui = fluidPage(
+    selectInput("only_incomings", "Only those who entered?", choices = c(FALSE, TRUE)),
+    selectInput("var", "Variable", choices = names(dat)),
+    actionButton("button", "Go!"),
+    tableOutput("table")
+  ),
+  server = function(input, output) {
+    data <- eventReactive(input$button, {
+      if (input$only_incomings) {
+        dat <- dat %>% filter_incomings()
+      }
+      dat
+    })
+    
+    output$table <- renderTable({
+      data() %>%
+        count_var_by_year(input$var) %>%
+        get_ratio(input$var)
+    })
+  }
+)
+
+```
+
+Esto también se podría graficar, pero hay muchas categorías. Aquí hay un ejemplo.
+
+```{r}
+create_graphs_grid <- function(df, var) {
+  new_df <- df %>%
+    count_var_by_year({{ var }}) %>%
+    get_ratio({{ var }})
+  
+  # Filter those that appear only once, because creating a graph with them
+  # does not make sense
+  filter_one <- function(df, var) {
+    # Obtain the names from the first column
+    i <- df %>%
+      group_by({{ var }}) %>%
+      count() %>%
+      filter(n <= 1) %>%
+      .[[1]]
+    # To remove them from the data set
+    df %>% filter(!{{ var }} %in% i)
+  }
+  new_df <- filter_one(new_df, {{ var }})
+  ggplot(new_df) + geom_line(aes(year, r)) + facet_wrap(vars({{ var }}))
+}
+create_graphs_grid(dat, Universidad_postulantes)
+
+```
+
+Grafiquemos seleccionando solo las más importantes.
+
+```{r}
+create_graphs_grid <- function(df, var, n = 25) {
+  new_df <- df %>%
+    count_var_by_year({{ var }}) %>%
+    get_ratio({{ var }})
+  
+  # Filter those that appear only once, because creating a graph with them
+  # does not make sense
+  filter_freq <- function(df, var, nrow) {
+    # Obtain the names from the first column
+    i <- df %>%
+      group_by({{ var }}) %>%
+      count() %>%
+      arrange(desc(n)) %>%
+      head(n = nrow) %>%
+      .[[1]]
+    # To remove them from the data set
+    df %>% filter({{ var }} %in% i)
+  }
+  new_df <- filter_freq(new_df, {{ var }}, nrow = n)
+  ggplot(new_df) + geom_line(aes(year, r)) + facet_wrap(vars({{ var }}))
+}
+
+create_graphs_grid(dat, especialidad_subespecialidad_postulantes, n = 30)
+```
+
+Además, podemos reconocer cuáles son los grupos, según las variables, con "problemas" en el género. Para esto podemos usar la prueba Chi-square para obtener valores de p para cada uno de los grupos. Los valores de p más bajos son aquellos que tienen más probabilidad de ser diferentes, por lo que valdría la pena analizarlos, determinar el punto en el cual la diferencia se considera estadísticamente significativa puede determinarse de varias formas.
+
+```{r}
+get_chisq_test_by_groups <- function(df, var) {
+  # Get frequencies of gender from the total
+  total_gender_freqs <- df %>% group_by(gender) %>% count() %>% drop_na()
+  # Create a nested tibble to compute the Chi-square test for each group
+  gender_freqs <- df %>%
+    group_by(.data[[var]], gender) %>%
+    count() %>%
+    drop_na() %>%
+    group_by(.data[[var]]) %>%
+    nest()
+  # Function to compute the Chi-square test for each group
+  chisq_test2 <- function(df) {
+    if (nrow(df) == 2) {
+      contingency_table <- as.table(matrix(
+        c(
+          total_gender_freqs$n[total_gender_freqs$gender == "female"],
+          total_gender_freqs$n[total_gender_freqs$gender == "male"],
+          df$n[df$gender == "female"],
+          df$n[df$gender == "male"]
+        ),
+        nrow = 2,
+        ncol = 2,
+        byrow = FALSE
+      ))
+      chisq.test(contingency_table, simulate.p.value = TRUE, B = 10000)$p.value
+    } else {
+      NA
+    }
+  }
+  # Return a tibble with the results of the tests
+  gender_freqs %>% mutate(p_values = map(data, chisq_test2))
+}
+
+get_p_values <- function(df) {
+  df %>%
+    select(1, p_values) %>%
+    ungroup() %>%
+    unnest(cols = p_values)
+}
+
+# Of course, you can change the variable
+dat %>%
+  get_chisq_test_by_groups("Universidad_postulantes") %>%
+  get_p_values() %>%
+  arrange(p_values)
+
+dat %>%
+  filter_incomings() %>%
+  get_chisq_test_by_groups("Universidad_postulantes") %>%
+  get_p_values() %>%
+  arrange(p_values)
+```
+
+También podemos crear una app pequeña para analizar más fácilmente estos datos en distintas variables.
+
+```{r, echo=FALSE}
+shinyApp(
+
+  ui = fluidPage(
+    selectInput("only_incomings", "Only consider those who entered?",
+                choices = c(FALSE, TRUE)),
+    selectInput("var", "Variable", choices = names(dat)),
+    actionButton("button", "Go!"),
+    tableOutput("table")
+  ),
+
+  server = function(input, output) {
+    
+    data <- eventReactive(input$button, {
+      if (input$only_incomings) {
+        dat %>% filter_incomings()
+      } else {
+        dat
+      }
+    })
+    
+    output$table <- renderTable({
+      data() %>%
+        get_chisq_test_by_groups(input$var) %>%
+        get_p_values() %>%
+        arrange(p_values)
+    })
+    
+  },
+
+  options = list(height = 500)
+)
+```
+
+
+
+
+

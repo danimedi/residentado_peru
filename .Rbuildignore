@@ -1,0 +1,5 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^residentado_peru\.Rproj$
+^data-raw$
+^README\.Rmd$

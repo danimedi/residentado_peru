@@ -4,8 +4,6 @@ title: "Clean data from CONAREME tables of applicants and incomings (aplicantes 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# set the project as the root directory
-knitr::opts_knit$set(root.dir = here::here())
 
 # packages
 library(readr)
@@ -18,55 +16,32 @@ library(purrr)
 # source multiple functions in the code directory
 source2 <- function(...) {
   funs <- unlist(list(...))
-  scripts <- file.path("code/functions", funs)
+  scripts <- file.path("R", funs)
   purrr::walk(scripts, source)
 }
-# save the complete data set based on the date (to avoid losing information)
+
 write_complete_data <- function(df) {
-  path <- paste0(
-    "data/clean_deidentified_joined/peru-COMPLETO-2013-2020_",
-    Sys.Date(),
-    ".csv"
-  )
-  write_csv(df, path)
+  readr::write_csv(df, "peru_residentado.csv")
 }
-# read the last complete data
-read_complete_data <- function(file_name = NULL) {
-  path <- "data/clean_deidentified_joined"
-  if (is.null(file_name)) {
-    files <- list.files(path, pattern = "[.]rds$", full.names = TRUE)
-    last_file <- files[length(files)]
-    read_rds(last_file)
-  } else {
-    file <- file.path(path, file_name)
-    read_rds(file)
-  }
+
+read_complete_data <- function() {
+  readr::read_csv("peru_residentado.csv")
 }
 ```
-
-## Organization
-
-The main directories in the project are `code` and `data`, containing the scripts/functions and data for the files.
-
-### Data organization
-
--   Raw files include the PDF files and other raw files that are not useful or programmable at first hand.
-
--   Clean data contains processed data created to program or work with it. It is divided in 'identified' and 'deidentified' data, depending on the presence or absence of names, DNI, or other identifiers.
 
 ## Extract and clean the data from PDF tables
 
 ```{r read-pdf}
 source2("read_pdf_tables.R")
-read_pdf_tables(path_input_pdf = "data/raw", 
-                path_output_csv = "data/clean/identified")
+read_pdf_tables(path_input_pdf = "conareme/pdf", 
+                path_output_csv = "conareme/identified")
 ```
 
 ## Unify the data
 
 ```{r unify-applicants}
 source2("unify_data_sets.R")
-files <- list.files("data/clean/identified", full.names = TRUE, 
+files <- list.files("conareme/identified", full.names = TRUE, 
                      pattern = "postulantes[.]csv$")
 years <- 2013:2020
 applicants <- unify_data_sets(files, years)
@@ -74,7 +49,7 @@ applicants <- unify_data_sets(files, years)
 ```
 
 ```{r unify-incomings}
-files <- list.files("data/clean/identified", full.names = TRUE, 
+files <- list.files("conareme/identified", full.names = TRUE, 
                      pattern = "ingresantes[.]csv$")
 years <- 2016:2020
 incomings <- unify_data_sets(files, years)
@@ -309,6 +284,7 @@ dat4 <- dat4 %>%
                           0, 1))
 ```
 
+
 ### Fix "bad names" of universities
 
 Some universities had problems with the names.
@@ -354,6 +330,46 @@ dat$Universidad_ingresantes <- replace_lookups(dat$Universidad_ingresantes,
                                                lookup_ingresantes)
 
 # detect_low_freq(dat, c("Universidad_postulantes", "Universidad_ingresantes"))
+```
+
+
+
+
+
+*The processes below this line have not been finished*
+
+---------------------------------------
+
+
+### Clean modality
+
+There are columns like V9, V11, V13 and modality that contain the same information, so this code checks and fix if the information is the same to avoid duplicates.
+
+```{r}
+indx_modalidad_libre <- function(
+  df, 
+  cols_modalidad = c("V9", "V11_postulantes", "V11_ingresantes", "V13", 
+                     "Modalidad_postulantes", "Modalidad_ingresantes")
+) {
+  df_filt <- df[cols_modalidad]
+  vapply(seq_len(nrow(df_filt)), function(i) {
+    row_vect <- unlist(df_filt[i, ])
+    row_vect <- row_vect[!is.na(row_vect)]
+    if (length(row_vect) > 0) {
+      all(row_vect == "Libre")
+    } else {
+      FALSE
+    }
+    
+  }, logical(1))
+}
+
+# split data
+i <- indx_modalidad_libre(dat)
+dat_libre <- dat[i, ]
+dat_no_libre <- dat[!i, ]
+
+
 ```
 
 ### Add the region based on the universities

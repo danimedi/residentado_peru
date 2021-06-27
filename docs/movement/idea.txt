@@ -1,0 +1,23 @@
+## Pregunta
+
+¿Hay cada vez más migración de médicos para realizar especialidades médicas en el Perú?
+
+## Hipótesis
+
+Cada vez hay más migración de médicos para realizar especialidades médicas.
+
+## Objetivos
+
+- Determinar si la migración para realizar especialidades médicas ha aumentado (ajustando el aumento del número de médicos).
+- Determinar si la migración ha aumentado solo en dirección a Lima o si ha aumentado también hacia provincias.
+- Determinar migraciones para la especialidad fuera del país y hacia el país.
+- Reconocer factores que puedan influir en la migración: especialidad, región, universidad privada vs. pública, género.
+
+## Variables
+
+- Un
+
+
+
+
+

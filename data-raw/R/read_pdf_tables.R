@@ -2,36 +2,27 @@
 #'
 #' @param path_input_pdf relative path in the project to the folder where the PDF files are located
 #' @param path_output_csv relative path in the project to the folder where the CSV files will be saved
-#'
-#' @return
-#' @export
-#'
-#' @examples
-
 read_pdf_tables <- function(path_input_pdf, path_output_csv) {
-  
-  # packages: here, tabulizer, readr
-  
+
   # obtain files to extract tables from
-  pdfs <- list.files(here::here(path_input_pdf), pattern = "[.]pdf$", full.names = TRUE)
-  
+  pdfs <- list.files(path_input_pdf, pattern = "[.]pdf$", full.names = TRUE)
+
   # loop to extract the tables and write csv files
-  # (save the results in `res` to check errors)
-  res <- sapply(pdfs, function(pdf) {
-    
+  for (pdf in pdfs) {
+
     # obtain the name of the output file
-    file <- paste0(gsub("[.]pdf$", "", basename(pdf)), ".csv")
-    file <- here::here(path_output_csv, file)
-    
+    file <- gsub("[.]pdf$", ".csv", basename(pdf))
+    file <- file.path(path_output_csv, file)
+
     # check if it exists to avoid running something more than once
-    if (!basename(file) %in% list.files(here::here(path_output_csv))) {
-      
+    if (!basename(file) %in% list.files(path_output_csv)) {
+
       tryCatch({
         print(paste("working with", basename(pdf), "..."))
-        
+
         # extract the tables from PDF file
         dat <- tabulizer::extract_tables(pdf, output = "matrix", encoding = "UTF-8")
-        
+
         # check that there is no problems with the first page (same number of columns)
         # otherwise, fix the first page first, and then join it with the rest
         if (ncol(dat[[1]]) == ncol(dat[[2]])) {
@@ -56,20 +47,25 @@ read_pdf_tables <- function(path_input_pdf, path_output_csv) {
           colnames(dat) <- col_names
           dat <- as.data.frame(dat)
         }
-        
+
         # save data as CSV
         readr::write_csv(dat, file)
-        
+
       }, error = function(e) e, warning = function(w) w)
     }
-    
-  })
-  
+
+  }
+
   # check the missing transformed files
-  raws <- list.files(here::here(path_input_pdf), pattern = "[.]pdf$")
+  raws <- list.files(path_input_pdf, pattern = "[.]pdf$")
   raws <- gsub("[.]pdf$", "", raws)
-  cleans <- list.files(here::here(path_output_csv), pattern = "[.]csv$")
+  cleans <- list.files(path_output_csv, pattern = "[.]csv$")
   cleans <- gsub("[.]csv$", "", cleans)
-  paste("there are", raws[!raws %in% cleans], "missing files in the output folder")
-  
+  missing <- raws[!raws %in% cleans]
+  if (length(missing) == 0) {
+    "There are no missing files"
+  } else if (length(missing) > 0) {
+    paste("there are", missing, "missing files in the output folder")
+  }
+
 }
